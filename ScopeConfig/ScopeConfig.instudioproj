@@ -1,0 +1,62 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<SourceFile Checksum="2D7BB6C3D499EA4CE9BC0751085EF12B43F55D05279CA6729DFFA98BBC2261E0C2C0D173C3B901313161EB8C6DCCBCEC33B1C54224276AD2A7545AEF18491774" xmlns="http://www.ni.com/PlatformFramework">
+	<SourceModelFeatureSet>
+		<ParsableNamespace AssemblyFileVersion="6.4.0.49504" FeatureSetName="GComponentFeatureSet" Name="http://www.ni.com/GComponent.xsd" OldestCompatibleVersion="6.1.0.1" Version="6.2.0.49152" />
+		<ParsableNamespace AssemblyFileVersion="6.4.0.49504" FeatureSetName="Editor" Name="http://www.ni.com/PlatformFramework" OldestCompatibleVersion="6.2.0.49154" Version="6.2.0.49154" />
+		<ApplicationVersionInfo Build="19.1.0.49153" Name="InstrumentStudio" Version="19.1.0.49153" />
+	</SourceModelFeatureSet>
+	<Project xmlns="http://www.ni.com/PlatformFramework">
+		<ProjectSettings Id="c28c4ab9c734406a92772093fe82246" ModelDefinitionType="ProjectSettings" Name="ZProjectSettings" />
+		<EmbeddedDefinitionReference Id="17b3c14423c4488b9456b37cbed0952e" ModelDefinitionType="NationalInstruments.ProjectExplorer.Modeling.ProjectDataManager" Name="ProjectExplorer">
+			<ProjectExplorer />
+		</EmbeddedDefinitionReference>
+		<NameScopingEnvoy Id="eb5c8cb443cb4b43920ad2e014bdc7ae" ModelDefinitionType="NullTarget" Name="NullTarget">
+			<NullTarget />
+			<EmbeddedDefinitionReference Bindings="{http://www.ni.com/GComponent.xsd}ComponentBaseType_Library" Id="b2ec61e4ecf449a49d7d1bfc1a87fcd6" ModelDefinitionType="ComponentDefinition" Name="Default Component">
+				<ComponentDefinition DefaultConfigurationName="Default" Id="8d4e5e073078413a910e623ca9cafa61" RootNamespaceId="b2ec61e4ecf449a49d7d1bfc1a87fcd6" xmlns="http://www.ni.com/GComponent.xsd">
+					<Icon Id="68bd454864a04cdb80d2109cfde0b9e8" ListViewIconCrop="0 0 40 40" xmlns="http://www.ni.com/PlatformFramework">
+						<IconPanel Height="[float]40" Id="b74782540bc747b7babdf99d9b295390" Left="[float]0" MinHeight="[float]0" MinWidth="[float]0" PanelSizeMode="Resize" Top="[float]0" Width="[float]40">
+							<IconTemplate ClipMargin="[SMThickness]3,3,3,3" Height="[float]40" Id="eb2bc5a67ac14e75a18e8a9f30d81aa2" Left="[float]0" TemplateName="[string]Gray" Top="[float]0" Width="[float]40">
+								<Rectangle Fill="[SMSolidColorBrush]#ff727272" Id="e63e0e4628dd41b7af88b9ad904be503" IsHitTestVisible="[bool]False" Left="[float]0" MinHeight="[float]1" MinWidth="[float]1" RadiusX="[float]4" RadiusY="[float]4" Top="[float]0" />
+								<Rectangle Fill="[SMSolidColorBrush]#ffe5e5e5" Id="6028fd8485d74ed6bf78b72f83950363" IsHitTestVisible="[bool]False" Left="[float]0" Margin="[SMThickness]1,1,1,1" MinHeight="[float]1" MinWidth="[float]1" RadiusX="[float]2.5" RadiusY="[float]2.5" Stroke="[SMSolidColorBrush]#fff2f2f2" Top="[float]0" />
+								<FileNameText Attached="[bool]True" Height="[float]36" Id="60ac834ecb5e4290a635c34637b9f4f9" Left="[float]0" Margin="[SMThickness]2,2,2,2" SizeMode="[TextModelSizeMode]AutoFont" Text="[string]Default Component" TextAlignment="[TextAlignment]Center" TextWrapping="[TextWrapping]Wrap" Top="[float]0" VerticalScrollBarVisibility="[ScrollBarVisibility]Hidden" Width="[float]36">
+									<FontSetting FontFamily="Verdana" FontSize="6" Id="b0c4132172b64002bbe2b072444d749f" />
+								</FileNameText>
+							</IconTemplate>
+						</IconPanel>
+					</Icon>
+					<CompilerSymbolTable Id="bed8c7c479e34bfea067bf8db022f1db" xmlns="http://www.ni.com/PlatformFramework" />
+					<ComponentConfiguration Id="3c61059a6fe946c482ef1ef0fac4b13e" Name="Default">
+						<CompilerSymbolTable Id="4892c405fe3b44379527a102594cc5e3" xmlns="http://www.ni.com/PlatformFramework" />
+					</ComponentConfiguration>
+				</ComponentDefinition>
+				<SourceFileReference Bindings="EnvoyManager" Id="e3fb897082df429091c873fedf823275" ModelDefinitionType="NationalInstruments.InstrumentFramework.Document.SourceModel.UnifiedTask" Name="Instrument.sfp" OverridingModelDefinitionType="NationalInstruments.InstrumentFramework.UnifiedTask" StoragePath="Instrument.sfp" />
+			</EmbeddedDefinitionReference>
+			<EmbeddedDefinitionReference Id="a8f789b8e2241b39006fbbf685e87ab" ModelDefinitionType="PackageReferencesDefinition" Name="ProjectReferences">
+				<PackageReferencesDefinition />
+			</EmbeddedDefinitionReference>
+		</NameScopingEnvoy>
+		<NameScopingEnvoy Id="6a0aad979253439684b1638e5cffa0ea" ModelDefinitionType="DefaultTarget" Name="DefaultTarget">
+			<DefaultTarget />
+			<NameScopingEnvoy Id="e421b9f5b93245849742f6c9e2e0af9b" ModelDefinitionType="BuildSpecification" Name="Interactive">
+				<BuildSpecificationDefinition Id="4d32d27076a54d52aec0b6aa84ee3fb8" TopLevelComponentRefId="9014e1a3a0b14b3eaea494b6e13ea269" xmlns="http://www.ni.com/GComponent.xsd">
+					<CompilerSymbolTable Id="672a286016084bd3a4d3833f31e2b241" xmlns="http://www.ni.com/PlatformFramework" />
+					<ComponentConfigurationReference AssociatedEnvoyId="25bcfa2b6e5b4b709cd7b11f982ae32a" ConfigName="Default" Id="9014e1a3a0b14b3eaea494b6e13ea269" />
+				</BuildSpecificationDefinition>
+				<EmbeddedDefinitionReference Id="f0374924e3b34dc38c003d8569a5458c" ModelDefinitionType="PackageReferencesDefinition" Name="ProjectReferences">
+					<PackageReferencesDefinition />
+				</EmbeddedDefinitionReference>
+				<EmbeddedDefinitionReference Bindings="ComponentMoC,{http://www.ni.com/GComponent.xsd}ComponentBaseType_Library" Id="25bcfa2b6e5b4b709cd7b11f982ae32a" ModelDefinitionType="SparseEnvoyManager" Name="Default Component" Reparentable="False">
+					<SparseEnvoyManager Id="1a940d81a0ad47b9a4e07deef9603cb2">
+						<SparseEnvoyManagerDependencySource Id="df11c482ceff4cbc92f1d6ed6fefaf88" Target="::NullTarget::Default Component" />
+					</SparseEnvoyManager>
+					<SourceFileReference Bindings="EnvoyManager" Id="f07cc6582a0047a499d989a2cd482ba4" ModelDefinitionType="NationalInstruments.InstrumentFramework.Document.SourceModel.UnifiedTask" Name="Instrument.sfp" OverridingModelDefinitionType="NationalInstruments.InstrumentFramework.UnifiedTask" StoragePath="Instrument.sfp" />
+				</EmbeddedDefinitionReference>
+				<EmbeddedDefinitionReference Id="4becef7d63bf4170b0805ac60d15a31c" ModelDefinitionType="RepositoryManagerDefinition" Name="vi.lib.Native" Reparentable="False">
+					<RepositoryManagerDefinition Location="&quot;&lt;AppDir&gt;\\Resources\\vi.lib\\Native&quot;" />
+				</EmbeddedDefinitionReference>
+			</NameScopingEnvoy>
+		</NameScopingEnvoy>
+	</Project>
+	<ProjectInformation xmlns="http://www.ni.com/PlatformFramework" />
+</SourceFile>
