@@ -1,10 +1,11 @@
 ﻿using NationalInstruments.ModularInstruments.NIRfsg;
-using NationalInstruments.ModularInstruments.NIRfsa;
 using NationalInstruments.ReferenceDesignLibraries;
 using System;
+using System.Collections.Generic;
 using static NationalInstruments.ReferenceDesignLibraries.Methods.EnvelopeTracking;
 using static NationalInstruments.ReferenceDesignLibraries.SG;
-using static SA.SA;
+using SA;
+using NationalInstruments.RFmx.InstrMX;
 
 namespace EnvelopeTrackingExample
 {
@@ -20,12 +21,23 @@ namespace EnvelopeTrackingExample
             #region Example Settings
             // Select mode for use in the example
             EnvelopeMode mode = EnvelopeMode.Detrough;
-            string waveformPath = @"C:\Users\Public\Documents\National Instruments\RFIC Test Software\Waveforms\LTE_FDD_DL_1x20MHz_TM11_OS4.tdms";
+            string waveformPath = @"C:\Users\LocalAdmin\Documents\GitHub\ET_DelaySweep\ET_FasterDelaySweep\Examples\ET_Example\wfm\5ms_256QAM_100MHz_30kHzSCS.tdms";
             #endregion
 
+            #region Configure RF Analyzer
+            string rfsaResourceName = "BCN_02";
+            RFmxInstrMX rfmxVsa = new RFmxInstrMX(rfsaResourceName, "");
+
+            double referenceLevel = 10;
+            double carrierFrequency = 5e9;
+
+            SA.SA rfmxSession = new SA.SA(rfmxVsa);
+            rfmxSession.ConfigureSA(referenceLevel, carrierFrequency);
+
+            #endregion
             #region Configure RF Generator
             // Initialize instrument sessions
-            string rfVsgResourceName = "BCN_01";
+            string rfVsgResourceName = "BCN_02";
             NIRfsg rfVsg = new NIRfsg(rfVsgResourceName, true, false);
 
             // Load up waveform
@@ -78,19 +90,9 @@ namespace EnvelopeTrackingExample
             ConfigureContinuousGeneration(envVsg, envWfm, numberOfSteps, "PXI_Trig0");
             #endregion
 
-            #region Configure RF Analyzer
-            string rfsaResourceName = "BCN_01";
-            NIRfsa rfsaVsa = new NIRfsa(rfsaResourceName, false, true);
-
-            double referenceLevel = 0;
-            double carrierFrequency = 5e9;
-            long numberOfSamples = 1000;
-            long numberOfRecords = Convert.ToInt64(numberOfSteps);
-            double iqRate = 400e6;
-
-            ConfigureSA(rfsaVsa, referenceLevel, carrierFrequency, numberOfSamples, numberOfRecords, iqRate);
-            InitiateSA(rfsaVsa);
-            #endregion
+            //Initiate RFmx acquisition with unique result name
+            string resultName = "acpResult";
+            rfmxSession.InitiateSA(resultName + "0", false);
 
             double sampleDelayPeriod = 1 / rfVsg.Arb.IQRate;
             Console.WriteLine("Generating " + numberOfSteps.ToString() + " delay steps");
@@ -100,20 +102,33 @@ namespace EnvelopeTrackingExample
 
             // Start envelope tracking
             SynchronizationConfiguration syncConfig = SynchronizationConfiguration.GetDefault();
-            InitiateSynchronousGeneration(rfVsg, envVsg, syncConfig);
-
             //Start fetching records in a loop
-            for (long i = 0; i < numberOfRecords; i++)
+            //Subtract 1 from "numberOfSteps" as we already initiated single measurement 
+            for (long i = 1; i < numberOfSteps; i++)
             {
-                //This loop will fetch IQ records as they become available
-                var outputWfm = FetchIQRecord(rfsaVsa, i, numberOfSamples);
-
-                //As each record is fetched, an asynchronous measurement can be performed on the IQ data. 
-                //For example, outputWfm can be passed to a preconfigured RFmx AOM thread that begins processing the measurement while the next record is fetched
+                //This loop will initiate each measurement without waiting for the results to be ready for fetching
+                if (i == 1)
+                {
+                    InitiateSynchronousGeneration(rfVsg, envVsg, syncConfig);
+                }
+                rfmxSession.InitiateSA(resultName + i.ToString(), true);
             }
 
-            // Wait until user presses a button to stop
+            List<double> lowerRelativePower = new List<double>();
+            List<double> upperRelativePower = new List<double>();
+            List<double> channelPower = new List<double>();
 
+            for (long i = 0; i < numberOfSteps; i++)
+            {
+                rfmxSession.FetchAcpRecord(resultName + i.ToString());
+                lowerRelativePower.Add(rfmxSession.lowerRelativePower[0]);
+                upperRelativePower.Add(rfmxSession.upperRelativePower[0]);
+                channelPower.Add(rfmxSession.absolutePower);
+            }
+
+
+
+            // Wait until user presses a button to stop
             Console.WriteLine("Press any key to abort...");
             Console.ReadKey();
 
@@ -124,7 +139,7 @@ namespace EnvelopeTrackingExample
             // Close instruments
             rfVsg.Close();
             envVsg.Close();
-            CloseSASession(rfsaVsa);
+            rfmxSession.CloseSASession();
         }
     }
 }

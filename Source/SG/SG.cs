@@ -152,7 +152,7 @@ namespace NationalInstruments.ReferenceDesignLibraries
         /// <param name="instrConfig">The common instrument settings to configure.</param>
         public static void ConfigureInstrument(NIRfsg rfsgHandle, InstrumentConfiguration instrConfig)
         {
-            rfsgHandle.SignalPath.SelectedPorts = instrConfig.SelectedPorts;
+            rfsgHandle.SignalPath.SelectedPorts = "if0";
             rfsgHandle.RF.ExternalGain = -instrConfig.ExternalAttenuation_dB;
             rfsgHandle.RF.Configure(instrConfig.CarrierFrequency_Hz, instrConfig.DutAverageInputPower_dBm);
 
@@ -311,6 +311,7 @@ namespace NationalInstruments.ReferenceDesignLibraries
             // Create continuous generation script that is unique to the waveform
             //Waveforms[1] contains a 1 sample delay 
             waveforms[0].Script = $@"script REPEAT{waveforms[0].Name}
+                                    wait 800000
                                     generate {waveforms[0].Name} marker0(0)
                                     repeat {(numberOfSteps-1).ToString()}
                                        generate {waveforms[1].Name} marker0(1)
@@ -338,7 +339,8 @@ namespace NationalInstruments.ReferenceDesignLibraries
 
             // Create continuous generation script that is unique to the waveform
             waveform.Script = $@"script REPEAT{waveform.Name}
-                                    repeat {(numberOfSteps-1).ToString()}
+                                    wait 800000
+                                    repeat {(numberOfSteps).ToString()}
                                        generate {waveform.Name} marker0(0)
                                     end repeat
                                 end script";
