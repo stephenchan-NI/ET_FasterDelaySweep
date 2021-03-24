@@ -305,6 +305,9 @@ namespace NationalInstruments.ReferenceDesignLibraries.Methods
         {
             //tclk.DevicesToSynchronize[0].SampleClockDelay = relativeDelay + (syncConfig.RFDelayRange_s / 2.0 + syncConfig.RFDelay_s);
             rfVsg.Arb.RelativeDelay = syncConfig.RFDelayRange_s / 2.0 + syncConfig.RFDelay_s + relativeDelay;
+            rfVsg.Utility.WaitUntilSettled(100);
+            while (rfVsg.CheckGenerationStatus() == RfsgGenerationStatus.InProgress) ;
+            tclk.Initiate();
         }
 
         /// <summary>Duplicates <paramref name="referenceWaveform"/>, updates the name, and sets appropriate values for the waveform.</summary>

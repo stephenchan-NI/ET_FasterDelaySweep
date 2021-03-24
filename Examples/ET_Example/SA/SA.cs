@@ -41,13 +41,13 @@ namespace SA
             NR.SelectMeasurements("", RFmxNRMXMeasurementTypes.Acp, true);
             NR.Acp.Configuration.ConfigureMeasurementMethod("", RFmxNRMXAcpMeasurementMethod.Normal);
             NR.Acp.Configuration.ConfigureNoiseCompensationEnabled("", RFmxNRMXAcpNoiseCompensationEnabled.False);
-            NR.Acp.Configuration.ConfigureSweepTime("", RFmxNRMXAcpSweepTimeAuto.False, 0.5e-3);
-
+            NR.Acp.Configuration.ConfigureSweepTime("", RFmxNRMXAcpSweepTimeAuto.False, 1e-3);
+            NR.Acp.Configuration.ConfigureNumberOfUtraOffsets("", 0);
+            NR.Acp.Configuration.ConfigureNumberOfEutraOffsets("", 0);
         }
 
         public void InitiateSA(string resultName, bool wait = false)
         {
-            Console.WriteLine("Initiating!");
             if (wait) instrSession.WaitForAcquisitionComplete(10);
             NR.Initiate("", resultName);
         }
@@ -59,12 +59,24 @@ namespace SA
 
         public void FetchAcpRecord(string resultName)
         {
-            string resultString = RFmxNRMX.BuildResultString(resultName);
-            NR.Acp.Results.FetchOffsetMeasurementArray(resultString, 20, ref lowerRelativePower,
-               ref upperRelativePower, ref lowerAbsolutePower, ref upperAbsolutePower);
+            try
+            {
+                string resultString = RFmxNRMX.BuildResultString(resultName);
+                NR.Acp.Results.FetchOffsetMeasurementArray(resultString, 20, ref lowerRelativePower,
+                   ref upperRelativePower, ref lowerAbsolutePower, ref upperAbsolutePower);
 
+                NR.Acp.Results.ComponentCarrier.FetchMeasurement(resultString, 20, out absolutePower, out relativePower);
+            }
 
-            NR.Acp.Results.ComponentCarrier.FetchMeasurement(resultString, 20, out absolutePower, out relativePower);
+            //Sometimes the analysis thread runs ahead of the acquisition, we can resolve this by waiting for a few miliseconds and trying again 
+            catch (RFmxException e) when (e.Message.Contains("-380405"))
+            {
+                string resultString = RFmxNRMX.BuildResultString(resultName);
+                NR.Acp.Results.FetchOffsetMeasurementArray(resultString, 20, ref lowerRelativePower,
+                   ref upperRelativePower, ref lowerAbsolutePower, ref upperAbsolutePower);
+
+                NR.Acp.Results.ComponentCarrier.FetchMeasurement(resultString, 20, out absolutePower, out relativePower);
+            }
         }
         public void CloseSASession()
         {
@@ -79,6 +91,5 @@ namespace SA
                 instrSession = null;
             }
         }
-
     }
 }

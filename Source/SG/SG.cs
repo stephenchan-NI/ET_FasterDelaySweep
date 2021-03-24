@@ -310,12 +310,17 @@ namespace NationalInstruments.ReferenceDesignLibraries
 
 
             // Create continuous generation script that is unique to the waveform
+            /*
             waveform.Script = $@"script REPEAT{waveform.Name}
                                     repeat until scripttrigger0
                                        generate {waveform.Name} marker0(0)
                                     end repeat
                                 end script";
-
+            */
+            waveform.Script = $@"script REPEAT{waveform.Name}
+                                       generate {waveform.Name} marker0(0)
+                                end script";
+            
             // Configure the instrument to generate this waveform
             // ApplyWaveformAttributes(rfsgHandle, waveform);
             ApplyWaveformAttributes(rfsgHandle, waveform);
