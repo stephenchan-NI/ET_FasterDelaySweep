@@ -33,6 +33,7 @@ namespace SA
             NR.SetSelectedPorts("", "if1");
             NR.ConfigureFrequency("", CarrierFrequency);
             NR.ConfigureExternalAttenuation("", 0);
+            //NR.ConfigureIQPowerEdgeTrigger("", "0", RFmxNRMXIQPowerEdgeTriggerSlope.Rising, -20, 0, RFmxNRMXTriggerMinimumQuietTimeMode.Auto, 0, RFmxNRMXIQPowerEdgeTriggerLevelType.Relative, true);
             NR.ConfigureDigitalEdgeTrigger("", RFmxInstrMXConstants.PxiTriggerLine1, RFmxNRMXDigitalEdgeTriggerEdge.Rising, 0, true);
             NR.ComponentCarrier.SetBandwidth("", 100e6);
             NR.ComponentCarrier.SetBandwidthPartSubcarrierSpacing("", 30e3);
@@ -44,13 +45,16 @@ namespace SA
 
         }
 
-        public void InitiateSA(string resultName, bool waitForComplete)
+        public void InitiateSA(string resultName, bool wait = false)
         {
-            if (waitForComplete)
-            {
-                instrSession.WaitForAcquisitionComplete(10);
-            }
+            Console.WriteLine("Initiating!");
+            if (wait) instrSession.WaitForAcquisitionComplete(10);
             NR.Initiate("", resultName);
+        }
+
+        public void WaitForSAComplete()
+        {
+            instrSession.WaitForAcquisitionComplete(10);
         }
 
         public void FetchAcpRecord(string resultName)

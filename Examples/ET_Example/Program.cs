@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using static NationalInstruments.ReferenceDesignLibraries.Methods.EnvelopeTracking;
 using static NationalInstruments.ReferenceDesignLibraries.SG;
 using SA;
+using NationalInstruments.ModularInstruments.SystemServices.TimingServices;
 using NationalInstruments.RFmx.InstrMX;
 
 namespace EnvelopeTrackingExample
@@ -23,9 +24,8 @@ namespace EnvelopeTrackingExample
             EnvelopeMode mode = EnvelopeMode.Detrough;
             string waveformPath = @"C:\Users\LocalAdmin\Documents\GitHub\ET_DelaySweep\ET_FasterDelaySweep\Examples\ET_Example\wfm\5ms_256QAM_100MHz_30kHzSCS.tdms";
             #endregion
-
             #region Configure RF Analyzer
-            string rfsaResourceName = "BCN_02";
+            string rfsaResourceName = "BCN_01";
             RFmxInstrMX rfmxVsa = new RFmxInstrMX(rfsaResourceName, "");
 
             double referenceLevel = 10;
@@ -37,7 +37,7 @@ namespace EnvelopeTrackingExample
             #endregion
             #region Configure RF Generator
             // Initialize instrument sessions
-            string rfVsgResourceName = "BCN_02";
+            string rfVsgResourceName = "BCN_01";
             NIRfsg rfVsg = new NIRfsg(rfVsgResourceName, true, false);
 
             // Load up waveform
@@ -50,10 +50,8 @@ namespace EnvelopeTrackingExample
             {
                 DownloadWaveform(rfVsg, wfm);
             }
-            int numberOfSteps = 200;
-            ConfigureContinuousDelayGeneration(rfVsg, rfWfms, numberOfSteps, "PXI_Trig1");
+            ConfigureContinuousGeneration(rfVsg, rfWfms[0], "PXI_Trig1");
             #endregion
-
             #region Configure Tracker Generator
             string envVsgResourceName = "5820_03";
             NIRfsg envVsg = new NIRfsg(envVsgResourceName, true, false);
@@ -87,31 +85,27 @@ namespace EnvelopeTrackingExample
             }
 
             ScaleAndDownloadEnvelopeWaveform(envVsg, envWfm, trackerConfig);
-            ConfigureContinuousGeneration(envVsg, envWfm, numberOfSteps, "PXI_Trig0");
+            ConfigureContinuousGeneration(envVsg, envWfm, "PXI_Trig0");
             #endregion
 
             //Initiate RFmx acquisition with unique result name
             string resultName = "acpResult";
-            rfmxSession.InitiateSA(resultName + "0", false);
-
-            double sampleDelayPeriod = 1 / rfVsg.Arb.IQRate;
-            Console.WriteLine("Generating " + numberOfSteps.ToString() + " delay steps");
-            Console.WriteLine("RFSG Arb IQ rate = " + (rfVsg.Arb.IQRate / 1e6).ToString() + " MHz");
-            Console.WriteLine("Delay step size = " + (sampleDelayPeriod * 1e9).ToString() + " nanoseconds");
-            Console.WriteLine("Initiating Generation");
+            rfmxSession.InitiateSA(resultName + 0.ToString());
 
             // Start envelope tracking
             SynchronizationConfiguration syncConfig = SynchronizationConfiguration.GetDefault();
-            //Start fetching records in a loop
-            //Subtract 1 from "numberOfSteps" as we already initiated single measurement 
-            for (long i = 1; i < numberOfSteps; i++)
+            TClock etSessions = new TClock();
+            InitiateSynchronousGeneration(rfVsg, envVsg, syncConfig, out etSessions);
+
+            //initialize delay sweep parameters
+            double numberOfSteps = 1000;
+            double stepSize = 1e-9;
+            for (double i = 1; i < numberOfSteps; i++)
             {
-                //This loop will initiate each measurement without waiting for the results to be ready for fetching
-                if (i == 1)
-                {
-                    InitiateSynchronousGeneration(rfVsg, envVsg, syncConfig);
-                }
+                Console.WriteLine(i.ToString());
                 rfmxSession.InitiateSA(resultName + i.ToString(), true);
+                //This loop will initiate each measurement without waiting for the results to be ready for fetching
+                AdjustSynchronousGeneration(etSessions, (stepSize*i), syncConfig, rfVsg);
             }
 
             List<double> lowerRelativePower = new List<double>();

@@ -288,7 +288,7 @@ namespace NationalInstruments.ReferenceDesignLibraries.Methods
         /// <param name="rfVsg">The open RFSG session corresponding to the RF signal generator.</param>
         /// <param name="envVsg">The open RFSG session corresponding to the envelope signal generator.</param>
         /// <param name="syncConfig">Specifies common settings used for synchronizing the RF and envelope signal generators.</param>
-        public static void InitiateSynchronousGeneration(NIRfsg rfVsg, NIRfsg envVsg, SynchronizationConfiguration syncConfig)
+        public static void InitiateSynchronousGeneration(NIRfsg rfVsg, NIRfsg envVsg, SynchronizationConfiguration syncConfig, out TClock tclock)
         {   
             TClock tclk = new TClock(new ITClockSynchronizableDevice[] { rfVsg, envVsg });
             // The PXIe-5840 can only apply positive delays so we have to establish an inital delay of -RFDelayRange/2 for TCLK to handle negative shifts as well
@@ -297,8 +297,15 @@ namespace NationalInstruments.ReferenceDesignLibraries.Methods
             tclk.ConfigureForHomogeneousTriggers();
             tclk.Synchronize();
             tclk.Initiate();
+            tclock = tclk;
         }
         #endregion
+
+        public static void AdjustSynchronousGeneration(TClock tclk, double relativeDelay, SynchronizationConfiguration syncConfig, NIRfsg rfVsg)
+        {
+            //tclk.DevicesToSynchronize[0].SampleClockDelay = relativeDelay + (syncConfig.RFDelayRange_s / 2.0 + syncConfig.RFDelay_s);
+            rfVsg.Arb.RelativeDelay = syncConfig.RFDelayRange_s / 2.0 + syncConfig.RFDelay_s + relativeDelay;
+        }
 
         /// <summary>Duplicates <paramref name="referenceWaveform"/>, updates the name, and sets appropriate values for the waveform.</summary>
         /// <param name="referenceWaveform">Specfies the waveform to clone and condition.</param>
