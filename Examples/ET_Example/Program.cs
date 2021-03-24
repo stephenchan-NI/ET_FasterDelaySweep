@@ -31,6 +31,7 @@ namespace EnvelopeTrackingExample
             EnvelopeMode mode = EnvelopeMode.Detrough;
             string waveformPath = @"C:\Users\LocalAdmin\Documents\GitHub\ET_DelaySweep\ET_FasterDelaySweep\Examples\ET_Example\wfm\1ms_NR_FR1_DL_FDD_SISO_BW-100MHz_CC-1_SCS-30kHz_Mod-256QAM-OFDM-NoSSB.tdms";
             #endregion
+
             #region Configure RF Analyzer
             string rfsaResourceName = "BCN_02";
             RFmxInstrMX rfmxVsa = new RFmxInstrMX(rfsaResourceName, "");
@@ -114,8 +115,8 @@ namespace EnvelopeTrackingExample
             double stepSize = 1e-9;
 
             //Start the thread to fetch ACP asynchronously. 
-            Thread asyncFetch = new Thread(() => AsynchronousFetch(rfmxSession, numberOfSteps, resultName));
-            asyncFetch.Start();
+            //Thread asyncFetch = new Thread(() => AsynchronousFetch(rfmxSession, numberOfSteps, resultName));
+            //asyncFetch.Start();
 
             //Start timer
             stopWatch.Start();
@@ -126,10 +127,22 @@ namespace EnvelopeTrackingExample
                 rfmxSession.InitiateSA(resultName + i.ToString(), true);
                 //This loop will initiate each measurement without waiting for the results to be ready for fetching
                 AdjustSynchronousGeneration(etSessions, (stepSize*i), syncConfig, rfVsg);
+
+                //Code below demonstrates 
+                /*
+                rfmxSession.FetchAcpRecord(resultName + i.ToString());
+                lowerRelativePower.Add(rfmxSession.lowerRelativePower[0]);
+                upperRelativePower.Add(rfmxSession.upperRelativePower[0]);
+                channelPower.Add(rfmxSession.absolutePower);
+                */
             }
+            //Code below demonstrates fetching after all hardware acquisitions are completed.
+            //Note that the measurement analysis still occurs in parallel with the hardware acquisitions, but only the fetching of the results is done sequentially below
+            AsynchronousFetch(rfmxSession, numberOfSteps, resultName);
+            
             //Finish fetch thread
-            asyncFetch.Join();
-            asyncFetch.Abort();
+            //asyncFetch.Join();
+            //asyncFetch.Abort();
             stopWatch.Stop();
             // Format and display the TimeSpan value.
             TimeSpan ts = stopWatch.Elapsed;
