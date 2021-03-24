@@ -128,7 +128,7 @@ namespace EnvelopeTrackingExample
                 //This loop will initiate each measurement without waiting for the results to be ready for fetching
                 AdjustSynchronousGeneration(etSessions, (stepSize*i), syncConfig, rfVsg);
 
-                //Code below demonstrates 
+                //Code below demonstrates sequential fetching, where each measurement must be fetched before proceeding to the next iteration 
                 /*
                 rfmxSession.FetchAcpRecord(resultName + i.ToString());
                 lowerRelativePower.Add(rfmxSession.lowerRelativePower[0]);

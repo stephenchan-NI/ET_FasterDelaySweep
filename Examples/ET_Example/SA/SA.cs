@@ -30,10 +30,9 @@ namespace SA
 
         public void ConfigureSA(double ReferenceLevel, double CarrierFrequency)
         {
-            NR.SetSelectedPorts("", "if1");
+            NR.SetSelectedPorts("", "");
             NR.ConfigureFrequency("", CarrierFrequency);
             NR.ConfigureExternalAttenuation("", 0);
-            //NR.ConfigureIQPowerEdgeTrigger("", "0", RFmxNRMXIQPowerEdgeTriggerSlope.Rising, -20, 0, RFmxNRMXTriggerMinimumQuietTimeMode.Auto, 0, RFmxNRMXIQPowerEdgeTriggerLevelType.Relative, true);
             NR.ConfigureDigitalEdgeTrigger("", RFmxInstrMXConstants.PxiTriggerLine1, RFmxNRMXDigitalEdgeTriggerEdge.Rising, 0, true);
             NR.ComponentCarrier.SetBandwidth("", 100e6);
             NR.ComponentCarrier.SetBandwidthPartSubcarrierSpacing("", 30e3);
