@@ -152,7 +152,7 @@ namespace NationalInstruments.ReferenceDesignLibraries
         /// <param name="instrConfig">The common instrument settings to configure.</param>
         public static void ConfigureInstrument(NIRfsg rfsgHandle, InstrumentConfiguration instrConfig)
         {
-            rfsgHandle.SignalPath.SelectedPorts = instrConfig.SelectedPorts;
+            rfsgHandle.SignalPath.SelectedPorts = "";
             rfsgHandle.RF.ExternalGain = -instrConfig.ExternalAttenuation_dB;
             rfsgHandle.RF.Configure(instrConfig.CarrierFrequency_Hz, instrConfig.DutAverageInputPower_dBm);
 
@@ -297,34 +297,7 @@ namespace NationalInstruments.ReferenceDesignLibraries
         /// <param name="markerEventExportTerminal">(Optional) Specifies the terminal name where the trigger at the start of the waveform should be exported to. 
         /// The default value is to generate a trigger on the PXI_Trig0 line.</param>
         /// <returns>The Waveform with the "Script" parameter set to the newly created generation script.</returns>
-        public static Waveform ConfigureContinuousDelayGeneration(NIRfsg rfsgHandle, Waveform[] waveforms, int numberOfSteps, string markerEventExportTerminal = "PXI_Trig0")
-        {
-            //Configure the trigger to be generated on the first sample of each waveform generation,
-            //denoted in the script below as "marker0"
-            rfsgHandle.DeviceEvents.MarkerEvents[0].ExportedOutputTerminal = RfsgMarkerEventExportedOutputTerminal.FromString(markerEventExportTerminal);
-
-            //A software trigger is configured that is used in the script below to control generation of
-            //the script. This ensures that a complete packet is always generated before aborting, and
-            //allows all generation functions to share a single abort function.
-            rfsgHandle.Triggers.ScriptTriggers[0].ConfigureSoftwareTrigger();
-
-            // Create continuous generation script that is unique to the waveform
-            //Waveforms[1] contains a 1 sample delay 
-            waveforms[0].Script = $@"script REPEAT{waveforms[0].Name}
-                                    generate {waveforms[0].Name} marker0(0)
-                                    repeat {(numberOfSteps-1).ToString()}
-                                       generate {waveforms[1].Name} marker0(1)
-                                    end repeat
-                                end script";
-
-            // Configure the instrument to generate this waveform
-            ApplyWaveformAttributes(rfsgHandle, waveforms, numberOfSteps);
-
-            // Return updated waveform struct to caller
-            return waveforms[0];
-        }
-
-        public static Waveform ConfigureContinuousGeneration(NIRfsg rfsgHandle, Waveform waveform, int numberOfSteps, string markerEventExportTerminal = "PXI_Trig0")
+        public static Waveform ConfigureContinuousGeneration(NIRfsg rfsgHandle, Waveform waveform, string markerEventExportTerminal = "PXI_Trig0")
         {
             //Configure the trigger to be generated on the first sample of each waveform generation,
             //denoted in the script below as "marker0"
@@ -337,14 +310,20 @@ namespace NationalInstruments.ReferenceDesignLibraries
 
 
             // Create continuous generation script that is unique to the waveform
+            /*
             waveform.Script = $@"script REPEAT{waveform.Name}
-                                    repeat {(numberOfSteps-1).ToString()}
+                                    repeat until scripttrigger0
                                        generate {waveform.Name} marker0(0)
                                     end repeat
                                 end script";
-
+            */
+            waveform.Script = $@"script REPEAT{waveform.Name}
+                                       generate {waveform.Name} marker0(0)
+                                end script";
+            
             // Configure the instrument to generate this waveform
-            ApplyWaveformAttributes(rfsgHandle, waveform, numberOfSteps);
+            // ApplyWaveformAttributes(rfsgHandle, waveform);
+            ApplyWaveformAttributes(rfsgHandle, waveform);
 
             // Return updated waveform struct to caller
             return waveform;
@@ -378,7 +357,7 @@ namespace NationalInstruments.ReferenceDesignLibraries
 
             //Download the generation script to the generator for later initiation
             waveform.Script = GenerateBurstedScript(paenConfig, waveTiming, waveform, out period, out idleTime);
-            ApplyWaveformAttributes(rfsgHandle, waveform, 0);
+            ApplyWaveformAttributes(rfsgHandle, waveform);
 
             //Configure the triggering for PA enable if selected
             if (paenConfig.PAEnableMode != PAENMode.Disabled)
@@ -407,20 +386,20 @@ namespace NationalInstruments.ReferenceDesignLibraries
         /// all associated parameters.</summary>
         /// <param name="rfsgHandle">The open RFSG session to configure.</param>
         /// <param name="waveform">Specifies the waveform and its associated script that is to be used for generation.</param>
-        public static void ApplyWaveformAttributes(NIRfsg rfsgHandle, Waveform[] waveforms, int numberOfSteps)
+        public static void ApplyWaveformAttributes(NIRfsg rfsgHandle, Waveform[] waveforms)
         {
             if (string.IsNullOrEmpty(waveforms[0].Script)) // default to continuous if no script in waveform
-                ConfigureContinuousGeneration(rfsgHandle, waveforms[0], numberOfSteps);
+                ConfigureContinuousGeneration(rfsgHandle, waveforms[0]);
             else
             {
                 IntPtr rfsgPtr = rfsgHandle.GetInstrumentHandle().DangerousGetHandle();
                 NIRfsgPlayback.SetScriptToGenerateSingleRfsg(rfsgPtr, waveforms[0].Script);
             }
         }
-        public static void ApplyWaveformAttributes(NIRfsg rfsgHandle, Waveform waveform, int numberOfSteps)
+        public static void ApplyWaveformAttributes(NIRfsg rfsgHandle, Waveform waveform)
         {
             if (string.IsNullOrEmpty(waveform.Script)) // default to continuous if no script in waveform
-                ConfigureContinuousGeneration(rfsgHandle, waveform, numberOfSteps);
+                ConfigureContinuousGeneration(rfsgHandle, waveform);
             else
             {
                 IntPtr rfsgPtr = rfsgHandle.GetInstrumentHandle().DangerousGetHandle();
@@ -469,7 +448,7 @@ namespace NationalInstruments.ReferenceDesignLibraries
             //off command to disable the PA.
             rfsgHandle.Triggers.ScriptTriggers[0].SendSoftwareEdgeTrigger();
 
-            int sleepTime_ms = 20;
+            int sleepTime_ms = 200;
             int maxIterations = (int)Math.Ceiling((double)timeOut_ms / sleepTime_ms);
             RfsgGenerationStatus genStatus = rfsgHandle.CheckGenerationStatus();
 

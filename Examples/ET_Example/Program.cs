@@ -1,15 +1,24 @@
 ﻿using NationalInstruments.ModularInstruments.NIRfsg;
-using NationalInstruments.ModularInstruments.NIRfsa;
 using NationalInstruments.ReferenceDesignLibraries;
 using System;
+using System.Collections.Generic;
 using static NationalInstruments.ReferenceDesignLibraries.Methods.EnvelopeTracking;
 using static NationalInstruments.ReferenceDesignLibraries.SG;
-using static SA.SA;
+using SA;
+using NationalInstruments.ModularInstruments.SystemServices.TimingServices;
+using NationalInstruments.RFmx.InstrMX;
+using System.Threading;
+using System.Diagnostics;
 
 namespace EnvelopeTrackingExample
 {
     class Program
     {
+
+        internal static List<double> lowerRelativePower = new List<double>();
+        internal static List<double> upperRelativePower = new List<double>();
+        internal static List<double> channelPower = new List<double>();
+
         internal enum EnvelopeMode { Detrough, LUT };
 
         /// <summary>
@@ -20,12 +29,23 @@ namespace EnvelopeTrackingExample
             #region Example Settings
             // Select mode for use in the example
             EnvelopeMode mode = EnvelopeMode.Detrough;
-            string waveformPath = @"C:\Users\Public\Documents\National Instruments\RFIC Test Software\Waveforms\LTE_FDD_DL_1x20MHz_TM11_OS4.tdms";
+            string waveformPath = @"C:\Users\LocalAdmin\Documents\GitHub\ET_DelaySweep\ET_FasterDelaySweep\Examples\ET_Example\wfm\1ms_NR_FR1_DL_FDD_SISO_BW-100MHz_CC-1_SCS-30kHz_Mod-256QAM-OFDM-NoSSB.tdms";
             #endregion
 
+            #region Configure RF Analyzer
+            string rfsaResourceName = "BCN_02";
+            RFmxInstrMX rfmxVsa = new RFmxInstrMX(rfsaResourceName, "");
+
+            double referenceLevel = 10;
+            double carrierFrequency = 5e9;
+
+            SA.SA rfmxSession = new SA.SA(rfmxVsa);
+            rfmxSession.ConfigureSA(referenceLevel, carrierFrequency);
+
+            #endregion
             #region Configure RF Generator
             // Initialize instrument sessions
-            string rfVsgResourceName = "BCN_01";
+            string rfVsgResourceName = "BCN_02";
             NIRfsg rfVsg = new NIRfsg(rfVsgResourceName, true, false);
 
             // Load up waveform
@@ -38,10 +58,8 @@ namespace EnvelopeTrackingExample
             {
                 DownloadWaveform(rfVsg, wfm);
             }
-            int numberOfSteps = 200;
-            ConfigureContinuousDelayGeneration(rfVsg, rfWfms, numberOfSteps, "PXI_Trig1");
+            ConfigureContinuousGeneration(rfVsg, rfWfms[0], "PXI_Trig1");
             #endregion
-
             #region Configure Tracker Generator
             string envVsgResourceName = "5820_03";
             NIRfsg envVsg = new NIRfsg(envVsgResourceName, true, false);
@@ -75,45 +93,65 @@ namespace EnvelopeTrackingExample
             }
 
             ScaleAndDownloadEnvelopeWaveform(envVsg, envWfm, trackerConfig);
-            ConfigureContinuousGeneration(envVsg, envWfm, numberOfSteps, "PXI_Trig0");
+            ConfigureContinuousGeneration(envVsg, envWfm, "PXI_Trig0");
             #endregion
 
-            #region Configure RF Analyzer
-            string rfsaResourceName = "BCN_01";
-            NIRfsa rfsaVsa = new NIRfsa(rfsaResourceName, false, true);
+            //Initiate RFmx acquisition with unique result name
+            //We want to initiate this first so that when the fetch thread is started, there is already a result populated.
+            string resultName = "acpResult";
+            rfmxSession.InitiateSA(resultName + 0.ToString());
 
-            double referenceLevel = 0;
-            double carrierFrequency = 5e9;
-            long numberOfSamples = 1000;
-            long numberOfRecords = Convert.ToInt64(numberOfSteps);
-            double iqRate = 400e6;
-
-            ConfigureSA(rfsaVsa, referenceLevel, carrierFrequency, numberOfSamples, numberOfRecords, iqRate);
-            InitiateSA(rfsaVsa);
-            #endregion
-
-            double sampleDelayPeriod = 1 / rfVsg.Arb.IQRate;
-            Console.WriteLine("Generating " + numberOfSteps.ToString() + " delay steps");
-            Console.WriteLine("RFSG Arb IQ rate = " + (rfVsg.Arb.IQRate / 1e6).ToString() + " MHz");
-            Console.WriteLine("Delay step size = " + (sampleDelayPeriod * 1e9).ToString() + " nanoseconds");
-            Console.WriteLine("Initiating Generation");
+            //Initialize Timer
+            Stopwatch stopWatch = new Stopwatch();
+            Stopwatch acqTimer = new Stopwatch();
 
             // Start envelope tracking
             SynchronizationConfiguration syncConfig = SynchronizationConfiguration.GetDefault();
-            InitiateSynchronousGeneration(rfVsg, envVsg, syncConfig);
+            TClock etSessions = new TClock();
+            InitiateSynchronousGeneration(rfVsg, envVsg, syncConfig, out etSessions);
 
-            //Start fetching records in a loop
-            for (long i = 0; i < numberOfRecords; i++)
+            //initialize delay sweep parameters
+            double numberOfSteps = 1000;
+            double stepSize = 1e-9;
+
+            //Start the thread to fetch ACP asynchronously. 
+            //Thread asyncFetch = new Thread(() => AsynchronousFetch(rfmxSession, numberOfSteps, resultName));
+            //asyncFetch.Start();
+
+            //Start timer
+            stopWatch.Start();
+
+            //Start iterating over delay values
+            for (double i = 1; i < numberOfSteps; i++)
             {
-                //This loop will fetch IQ records as they become available
-                var outputWfm = FetchIQRecord(rfsaVsa, i, numberOfSamples);
+                rfmxSession.InitiateSA(resultName + i.ToString(), true);
+                //This loop will initiate each measurement without waiting for the results to be ready for fetching
+                AdjustSynchronousGeneration(etSessions, (stepSize*i), syncConfig, rfVsg);
 
-                //As each record is fetched, an asynchronous measurement can be performed on the IQ data. 
-                //For example, outputWfm can be passed to a preconfigured RFmx AOM thread that begins processing the measurement while the next record is fetched
+                //Code below demonstrates sequential fetching, where each measurement must be fetched before proceeding to the next iteration 
+                /*
+                rfmxSession.FetchAcpRecord(resultName + i.ToString());
+                lowerRelativePower.Add(rfmxSession.lowerRelativePower[0]);
+                upperRelativePower.Add(rfmxSession.upperRelativePower[0]);
+                channelPower.Add(rfmxSession.absolutePower);
+                */
             }
+            //Code below demonstrates fetching after all hardware acquisitions are completed.
+            //Note that the measurement analysis still occurs in parallel with the hardware acquisitions, but only the fetching of the results is done sequentially below
+            AsynchronousFetch(rfmxSession, numberOfSteps, resultName);
+            
+            //Finish fetch thread
+            //asyncFetch.Join();
+            //asyncFetch.Abort();
+            stopWatch.Stop();
+            // Format and display the TimeSpan value.
+            TimeSpan ts = stopWatch.Elapsed;
+            string elapsedTime = ts.TotalMilliseconds.ToString();
 
             // Wait until user presses a button to stop
-
+            Console.WriteLine("Run time = " + elapsedTime);
+            Console.WriteLine("Time per acquisition and fetch = " + Convert.ToDouble(elapsedTime) / numberOfSteps + "ms per step");
+            Console.WriteLine("Output Channel power = " + channelPower[0].ToString() + "dB");
             Console.WriteLine("Press any key to abort...");
             Console.ReadKey();
 
@@ -124,7 +162,18 @@ namespace EnvelopeTrackingExample
             // Close instruments
             rfVsg.Close();
             envVsg.Close();
-            CloseSASession(rfsaVsa);
+            rfmxSession.CloseSASession();
+        }
+
+        public static void AsynchronousFetch(SA.SA rfmxSession, double numberOfSteps, string resultName)
+        {
+            for (long i = 0; i < numberOfSteps; i++)
+            {
+                rfmxSession.FetchAcpRecord(resultName + i.ToString());
+                lowerRelativePower.Add(rfmxSession.lowerRelativePower[0]);
+                upperRelativePower.Add(rfmxSession.upperRelativePower[0]);
+                channelPower.Add(rfmxSession.absolutePower);
+            }
         }
     }
 }
