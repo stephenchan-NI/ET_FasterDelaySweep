@@ -5,14 +5,14 @@ using System.Text;
 using System.Threading.Tasks;
 using NationalInstruments.ModularInstruments.NIRfsa;
 using NationalInstruments.RFmx.InstrMX;
-using NationalInstruments.RFmx.NRMX;
+using NationalInstruments.RFmx.SpecAnMX;
 using NationalInstruments;
 
 namespace SA
 {
     public class SA
     {
-        RFmxNRMX NR;
+        RFmxSpecAnMX specAn;
         RFmxInstrMX instrSession;
         public double[] lowerRelativePower;                                               /* (dB) */
         public double[] upperRelativePower;                                               /* (dB) */
@@ -23,32 +23,30 @@ namespace SA
 
         public SA(RFmxInstrMX instSession)
         {
-            NR = instSession.GetNRSignalConfiguration();     /* Create a new RFmx Session */
+            specAn = instSession.GetSpecAnSignalConfiguration();     /* Create a new RFmx Session */
             instrSession = instSession;
             instrSession.ConfigureFrequencyReference("", RFmxInstrMXConstants.PxiClock, 10.0e6);
         }
 
         public void ConfigureSA(double ReferenceLevel, double CarrierFrequency)
         {
-            NR.SetSelectedPorts("", "");
-            NR.ConfigureFrequency("", CarrierFrequency);
-            NR.ConfigureExternalAttenuation("", 0);
-            NR.ConfigureDigitalEdgeTrigger("", RFmxInstrMXConstants.PxiTriggerLine1, RFmxNRMXDigitalEdgeTriggerEdge.Rising, 0, true);
-            NR.ComponentCarrier.SetBandwidth("", 100e6);
-            NR.ComponentCarrier.SetBandwidthPartSubcarrierSpacing("", 30e3);
-            NR.ConfigureReferenceLevel("", ReferenceLevel);
-            NR.SelectMeasurements("", RFmxNRMXMeasurementTypes.Acp, true);
-            NR.Acp.Configuration.ConfigureMeasurementMethod("", RFmxNRMXAcpMeasurementMethod.Normal);
-            NR.Acp.Configuration.ConfigureNoiseCompensationEnabled("", RFmxNRMXAcpNoiseCompensationEnabled.False);
-            NR.Acp.Configuration.ConfigureSweepTime("", RFmxNRMXAcpSweepTimeAuto.False, 1e-3);
-            NR.Acp.Configuration.ConfigureNumberOfUtraOffsets("", 0);
-            NR.Acp.Configuration.ConfigureNumberOfEutraOffsets("", 0);
+            specAn.SetSelectedPorts("", "if1");
+            specAn.ConfigureFrequency("", CarrierFrequency);
+            specAn.ConfigureExternalAttenuation("", 0);
+            specAn.ConfigureReferenceLevel("", ReferenceLevel);
+            specAn.ConfigureDigitalEdgeTrigger("", RFmxInstrMXConstants.PxiTriggerLine1, RFmxSpecAnMXDigitalEdgeTriggerEdge.Rising, 0, true);
+            specAn.SelectMeasurements("", RFmxSpecAnMXMeasurementTypes.Acp, true);
+            specAn.Acp.Configuration.ConfigureCarrierAndOffsets("", 98.31e6, 1, 100e6);
+            specAn.Acp.Configuration.ConfigureMeasurementMethod("", RFmxSpecAnMXAcpMeasurementMethod.Normal);
+            specAn.Acp.Configuration.ConfigureNoiseCompensationEnabled("", RFmxSpecAnMXAcpNoiseCompensationEnabled.False);
+            specAn.Acp.Configuration.ConfigureSweepTime("", RFmxSpecAnMXAcpSweepTimeAuto.False, 1e-3);
+            specAn.Acp.Configuration.SetRbwFilterBandwidth("", 5e3);
         }
 
         public void InitiateSA(string resultName, bool wait = false)
         {
             if (wait) instrSession.WaitForAcquisitionComplete(10);
-            NR.Initiate("", resultName);
+            specAn.Initiate("", resultName);
         }
 
         public void WaitForSAComplete()
@@ -60,29 +58,29 @@ namespace SA
         {
             try
             {
-                string resultString = RFmxNRMX.BuildResultString(resultName);
-                NR.Acp.Results.FetchOffsetMeasurementArray(resultString, 20, ref lowerRelativePower,
+                string resultString = RFmxSpecAnMX.BuildResultString(resultName);
+                specAn.Acp.Results.FetchOffsetMeasurementArray(resultString, 20, ref lowerRelativePower,
                    ref upperRelativePower, ref lowerAbsolutePower, ref upperAbsolutePower);
 
-                NR.Acp.Results.ComponentCarrier.FetchMeasurement(resultString, 20, out absolutePower, out relativePower);
+                specAn.Acp.Results.FetchCarrierMeasurement(resultString, 20, out absolutePower, out relativePower, out _, out _);
             }
 
             //Sometimes the analysis thread runs ahead of the acquisition, we can resolve this by waiting for a few miliseconds and trying again 
             catch (RFmxException e) when (e.Message.Contains("-380405"))
             {
-                string resultString = RFmxNRMX.BuildResultString(resultName);
-                NR.Acp.Results.FetchOffsetMeasurementArray(resultString, 20, ref lowerRelativePower,
+                string resultString = RFmxSpecAnMX.BuildResultString(resultName);
+                specAn.Acp.Results.FetchOffsetMeasurementArray(resultString, 20, ref lowerRelativePower,
                    ref upperRelativePower, ref lowerAbsolutePower, ref upperAbsolutePower);
 
-                NR.Acp.Results.ComponentCarrier.FetchMeasurement(resultString, 20, out absolutePower, out relativePower);
+                specAn.Acp.Results.FetchCarrierMeasurement(resultString, 20, out absolutePower, out relativePower, out _, out _);
             }
         }
         public void CloseSASession()
         {
-            if (NR != null)
+            if (specAn != null)
             {
-                NR.Dispose();
-                NR = null;
+                specAn.Dispose();
+                specAn = null;
             }
             if (instrSession != null)
             {
